@@ -1,11 +1,9 @@
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Grid from "@material-ui/core/Grid";
 import "./Book.css";
 import EvStationIcon from "@mui/icons-material/EvStation";
 import { useLocation } from "react-router-dom";
-import { useState } from "react";
 import TextField from "@mui/material/TextField";
-import PaymentIcon from "@mui/icons-material/Payment";
 import logo from "../../assets/images/LPlogo.png";
 import { Button } from "@mui/material";
 import { Slider } from "@material-ui/core";
@@ -18,44 +16,28 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
-// import TextField from '@mui/material/TextField';
-import AdapterDateFns from "@mui/lab/AdapterDateFns";
-import LocalizationProvider from "@mui/lab/LocalizationProvider";
-import DatePicker from "@mui/lab/DatePicker";
 
 function Book() {
     const location = useLocation();
-    const [selection, setSelection] = useState(0);
-    console.log(location.state);
+    var num = location.pathname.split("/")[2];
     const [booking, setBooking] = useState({
         station: "",
         capacity: "",
+        duration: "",
         start_time: "",
         end_time: "",
         date: "",
         plug: "",
     });
 
-    const [val, setVal] = useState([0, 45]);
-    const updateRange = (e, data) => {
-        setSelection(data);
-        setVal(data);
-    };
-    const [value, setValue] = React.useState(null);
+    const [open, setOpen] = useState(false);
+    const anchorRef = useRef("");
+    const [selectedIndex, setSelectedIndex] = useState(0);
 
-    const options = [
-        "CSS Connector 1",
-        "CSS Connector 2",
-        "CSS Connector 3",
-        "CSS Connector 4",
-    ];
-    const [open, setOpen] = React.useState(false);
-    const anchorRef = React.useRef(null);
-    const [selectedIndex, setSelectedIndex] = React.useState(1);
-
-    const handleClick = () => {
-        console.info(`You clicked ${options[selectedIndex]}`);
-    };
+    // function handleClick() {
+    //   console.log(charger[selectedIndex].id)
+    //   setBooking({ ...booking, plug:  });
+    // };
 
     const handleMenuItemClick = (event, index) => {
         setSelectedIndex(index);
@@ -93,50 +75,81 @@ function Book() {
         },
     ];
 
-    const handleChange = (e) => {
-        const name = e.target.name;
-        const value = e.target.value;
-        setBooking({ ...booking, [name]: value ? value : null });
+    // checking available plugs
+    const [timings, setTimings] = useState([]);
+    const [charger, setCharger] = useState([
+        {
+            id: 0,
+            station_name: {
+                id: 0,
+                city: "",
+                active_status: "",
+                location: "",
+                phone_no: "",
+                star_rating: "",
+                station_name: "",
+                working_hours: "",
+                photos: "",
+            },
+            charger_type: "",
+            charging_rate: "",
+            charging_speed: "",
+        },
+    ]);
+
+    var myHeaders = new Headers();
+    myHeaders.append("Authorization", `Token ${localStorage.getItem("token")}`);
+
+    var requestOptions = {
+        method: "GET",
+        headers: myHeaders,
+        redirect: "follow",
     };
 
-    const handleBooking = (e) => {
+    useEffect(() => {
+        fetch(
+            `https://findmyplug.herokuapp.com/slot/?station=${num}`,
+            requestOptions
+        )
+            .then((response) => response.json())
+            .then((result) => {
+                console.log(result);
+                setCharger(result);
+            })
+            .catch((error) => console.log("error", error));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleChange = (e) => {
+        console.log(e.target.name);
+        console.log(e.target.value);
+        const name = e.target.name;
+        const value = e.target.value;
+        setBooking({ ...booking, [name]: value ? value : "" });
+    };
+
+    const handleBooking = async (e) => {
         e.preventDefault();
-        if (
-            booking.station &&
-            booking.capacity &&
-            booking.duration &&
-            booking.start_time &&
-            booking.end_time &&
-            booking.date &&
-            booking.plug
-        ) {
-            var myHeaders = new Headers();
-            myHeaders.append(
-                "Authorization",
-                `Token ${localStorage.getItem("token")}`
-            );
 
-            var formdata = new FormData();
-            formdata.append("date", booking.date);
-            formdata.append("duration", booking.duration);
-            formdata.append("start_time", booking.start_time);
-            formdata.append("end_time", booking.end_time);
-            formdata.append("units", "15");
-            formdata.append("amount", "700.00");
-            formdata.append("plug", booking.plug);
+        var formdata = new FormData();
+        formdata.append("date", booking.date);
+        formdata.append("duration", booking.duration);
+        formdata.append("plug", charger[selectedIndex].id);
 
-            var requestOptions = {
-                method: "POST",
-                headers: myHeaders,
-                body: formdata,
-                redirect: "follow",
-            };
+        var requestOptions2 = {
+            method: "POST",
+            headers: myHeaders,
+            body: formdata,
+            redirect: "follow",
+        };
 
-            fetch("https://findmyplug.herokuapp.com/bookings/", requestOptions)
-                .then((response) => response.json())
-                .then((result) => console.log(result))
-                .catch((error) => console.log("error", error));
-        }
+        await fetch("https://findmyplug.herokuapp.com/slot/", requestOptions2)
+            .then((response) => response.json())
+            .then((result) => {
+                console.log(result.slots.slice(2, -2).split("', '"));
+                setTimings(result.slots.slice(2, -2).split("', '"));
+            })
+            .catch((error) => console.log("error", error));
     };
 
     return (
@@ -171,12 +184,17 @@ function Book() {
                                     <b>Phone Number : </b>
                                     {location.state.number}
                                 </p>
-                                <p className='BookingInfo'><b>Station ID : </b>{location.state.id}</p>
-
                             </Grid>
                             <Grid item>
                                 <div className="priceDiv">
-                                    <h2>Price</h2>
+                                    <h2>
+                                        {" "}
+                                        &#8377;{" "}
+                                        {charger[selectedIndex].charging_rate *
+                                            charger[selectedIndex].charging_speed *
+                                            booking.duration *
+                                            booking.capacity}
+                                    </h2>
                                 </div>
                             </Grid>
                         </Grid>
@@ -184,153 +202,173 @@ function Book() {
                     <Grid item className="BookingFormOuterDiv">
                         <h2 style={{ textAlign: "left" }}>Details : </h2>
                         <Grid container className="BookingFormInnerDiv">
-                            <Grid item className="textFieldContainer">
-                                <LocalizationProvider
-                                    dateAdapter={AdapterDateFns}
-                                    className="date_picker"
-                                >
-                                    <DatePicker
-                                        label="Date"
-                                        value={value}
-                                        onChange={(newValue) => {
-                                            setValue(newValue);
-                                        }}
-                                        renderInput={(params) => <TextField {...params} />}
-                                    />
-                                </LocalizationProvider>
-
-                                <Grid className="duration">
-                                    <ButtonGroup
-                                        variant="outlined"
+                            <Grid container justifyContent="center" alignItems="center">
+                                <Grid item md={6} sm={12} style={{ textAlign: "center" }}>
+                                    <TextField
                                         margin="normal"
                                         required
-                                        aria-label="outlined button group"
-                                        value={booking.duration}
-                                    >
-                                        <h3>Duration:</h3>
+                                        id="outlined-required"
+                                        value={booking.date}
+                                        onChange={handleChange}
+                                        name="date"
+                                        type="Date"
+                                        className="textField"
+                                    />
+                                </Grid>
+                                <Grid
+                                    item
+                                    md={6}
+                                    sm={12}
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "row",
+                                        justifyContent: "center",
+                                    }}
+                                >
+                                    <h3 className="duration">Duration &nbsp;</h3>
+                                    <ButtonGroup variant="outlined" margin="normal" size="large">
                                         <Button
+                                            name="duration"
+                                            onClick={() => setBooking({ ...booking, duration: "1" })}
                                             className="duration_button"
-                                            onClick={() => setSelection(15)}
+                                            id="duration_button_left"
                                         >
                                             1h
                                         </Button>
                                         <Button
+                                            name="duration"
+                                            onClick={() => setBooking({ ...booking, duration: "2" })}
                                             className="duration_button"
-                                            onClick={() => setSelection(30)}
-
+                                            id="duration_button_center"
                                         >
                                             2h
                                         </Button>
                                         <Button
+                                            name="duration"
+                                            onClick={() => setBooking({ ...booking, duration: "3" })}
                                             className="duration_button"
-                                            onClick={() => setSelection(45)}
+                                            id="duration_button_right"
                                         >
                                             3h
                                         </Button>
                                     </ButtonGroup>
                                 </Grid>
                             </Grid>
-                            <Grid item className="textFieldContainer">
-                                <Box sx={{ width: 350 }} className="capacity">
-                                    <Slider
-                                        aria-label="Restricted values"
-                                        onChange={updateRange}
-                                        // getAriaValueText={valuetext}
-                                        step={15}
-                                        valueLabelDisplay="auto"
-                                        marks={marks}
-                                        max={45}
-                                    />
-                                </Box>
-
-                                <React.Fragment>
-                                    <ButtonGroup
-                                        variant="outlined"
-                                        ref={anchorRef}
-                                        aria-label="split button"
-                                        className="plug_type"
-                                    >
-                                        <Button onClick={handleClick}>
-                                            {options[selectedIndex]}
-                                        </Button>
-                                        <Button
-                                            size="small"
-                                            aria-controls={open ? "split-button-menu" : undefined}
-                                            aria-expanded={open ? "true" : undefined}
-                                            aria-label="select merge strategy"
-                                            aria-haspopup="menu"
-                                            onClick={handleToggle}
+                            <Grid container className="textFieldContainer">
+                                <Grid item md={6} sm={12} style={{ textAlign: "center" }}>
+                                    <Box sx={{ marginInline: "15%" }}>
+                                        <h3 className="duration">
+                                            {" "}
+                                            Capacity &nbsp;{" "}
+                                            {booking.capacity ? booking.capacity : "0"} kW{" "}
+                                        </h3>
+                                        <Slider
+                                            onChange={(e, value) =>
+                                                setBooking({ ...booking, capacity: value })
+                                            }
+                                            step={15}
+                                            name="capacity"
+                                            marks={marks}
+                                            max={45}
+                                        />
+                                    </Box>
+                                </Grid>
+                                <Grid item md={6} sm={12} style={{ textAlign: "center" }}>
+                                    <React.Fragment>
+                                        <ButtonGroup
+                                            variant="outlined"
+                                            ref={anchorRef}
+                                            aria-label="split button"
                                         >
-                                            <ArrowDropDownIcon />
-                                        </Button>
-                                    </ButtonGroup>
-                                    <Popper
-                                        open={open}
-                                        anchorEl={anchorRef.current}
-                                        role={undefined}
-                                        transition
-                                    // disablePortal
-                                    >
-                                        {({ TransitionProps, placement }) => (
-                                            <Grow
-                                                {...TransitionProps}
-                                                style={{
-                                                    transformOrigin:
-                                                        placement === "bottom"
-                                                            ? "center top"
-                                                            : "center bottom",
-                                                }}
+                                            <h3 className="duration"> Charger no. </h3>
+                                            <Button>
+                                                {charger[selectedIndex].charger_type +
+                                                    ` ${selectedIndex + 1}`}
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                aria-controls={open ? "split-button-menu" : ""}
+                                                aria-expanded={open ? "true" : ""}
+                                                aria-label="select merge strategy"
+                                                aria-haspopup="menu"
+                                                onClick={handleToggle}
                                             >
-                                                <Paper>
-                                                    <ClickAwayListener onClickAway={handleClose}>
-                                                        <MenuList id="split-button-menu">
-                                                            {options.map((option, index) => (
-                                                                <MenuItem
-                                                                    key={option}
-                                                                    // disabled={index === 2}
-                                                                    selected={index === selectedIndex}
-                                                                    onClick={(event) =>
-                                                                        handleMenuItemClick(event, index)
-                                                                    }
-                                                                >
-                                                                    {option}
-                                                                </MenuItem>
-                                                            ))}
-                                                        </MenuList>
-                                                    </ClickAwayListener>
-                                                </Paper>
-                                            </Grow>
-                                        )}
-                                    </Popper>
-                                </React.Fragment>
+                                                <ArrowDropDownIcon />
+                                            </Button>
+                                        </ButtonGroup>
+                                        <Popper
+                                            open={open}
+                                            anchorEl={anchorRef.current}
+                                            role={""}
+                                            transition
+                                        >
+                                            {({ TransitionProps, placement }) => (
+                                                <Grow
+                                                    {...TransitionProps}
+                                                    style={{
+                                                        transformOrigin:
+                                                            placement === "bottom"
+                                                                ? "center top"
+                                                                : "center bottom",
+                                                    }}
+                                                >
+                                                    <Paper>
+                                                        <ClickAwayListener onClickAway={handleClose}>
+                                                            <MenuList id="split-button-menu">
+                                                                {charger.map((option, index) => (
+                                                                    <MenuItem
+                                                                        key={index}
+                                                                        selected={index === selectedIndex}
+                                                                        onClick={(event) =>
+                                                                            handleMenuItemClick(event, index)
+                                                                        }
+                                                                    >
+                                                                        Charger no. {index + 1}
+                                                                    </MenuItem>
+                                                                ))}
+                                                            </MenuList>
+                                                        </ClickAwayListener>
+                                                    </Paper>
+                                                </Grow>
+                                            )}
+                                        </Popper>
+                                    </React.Fragment>
+                                </Grid>
+                            </Grid>
+                            <Grid
+                                container
+                                justifyContent="flex-end"
+                                style={{ padding: "2% 5%" }}
+                            >
+                                <Button
+                                    className="main_bt"
+                                    style={{ textAlign: "left" }}
+                                    onClick={handleBooking}
+                                >
+                                    Find Slots
+                                </Button>
                             </Grid>
                         </Grid>
                     </Grid>
-                    <Grid item className="BookingFormConfirmReview">
-                        <h3
-                            className="main_bt"
-                            style={{ textAlign: "left" }}
-                            onClick={handleBooking}
-                        >
-                            Find Slots
-                        </h3>
-                    </Grid>
-                    {/* <Grid item className="BookingFormPaymentMethod">
-						<h2 style={{ textAlign: "left" }}>Payment Method : </h2>
-						<div className="paymentOptions">
-							<PaymentIcon className="paymentIcon" />
-							<h2>PayTM</h2>
-						</div>
-					</Grid> */}
                     <Grid item className="BookingFormPaymentMethod">
                         <h2 style={{ textAlign: "left" }}>Slots Available : </h2>
+                        <Grid container spacing={2}>
+                            {timings
+                                ? timings.map((time, index) => {
+                                    return (
+                                        <Grid key={index} item md={3} sm={12} style={{ textAlign: "center" }}>
+                                            <Button className="main_bt">{time}</Button>
+                                        </Grid>
+                                    );
+                                })
+                                : null}
+                        </Grid>
                     </Grid>
 
                     <Grid item className="BookingFormConfirmReview">
                         <h3 style={{ textAlign: "left" }} onClick={handleBooking}>
                             Confirm Booking
                         </h3>
-                        {/* <h3 style={{ textAlign: "left" }}>Review</h3> */}
                     </Grid>
                 </Grid>
             </div>
