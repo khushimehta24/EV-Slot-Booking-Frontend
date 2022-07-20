@@ -36,24 +36,25 @@ export default function Booking() {
 				<Grid item xs={12} sm={12} md={2} lg={2} className="bookingpage_logo">
 					<img src={logo} alt="logo" />
 				</Grid>
-				<Grid item xs="auto" sm="auto" md={10} lg={10}/>
+				<Grid item xs="auto" sm="auto" md={10} lg={10} />
 			</Grid>
 
-			<center><Grid container spacing={2} style={{ width:"90%" }}>
+			<center><Grid container spacing={2} style={{ width: "90%" }}>
 				{data.map((item, index) => (
 					<Grid
 						item
 						xs={12}
 						md={4}
 						sm={6}
-						lg={3}						
+						lg={3}
 						key={index}
-						
+
 					>
 						<CardInfo
 							name={item.station_name}
 							address={item.location}
 							number={item.phone_no}
+							id={item.id}
 							value={item.star_rating}
 						/>
 					</Grid>

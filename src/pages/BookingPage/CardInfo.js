@@ -18,6 +18,7 @@ export default function CardInfo(props) {
 	const name = props.name
 	const address = props.address
 	const number = props.number
+	const id = props.id
 	const navigate = useNavigate();
 	return (
 		<Card className="card_grid">
@@ -102,7 +103,7 @@ export default function CardInfo(props) {
 					>
 						Book
 					</Button> */}
-					<Link to={"/book"} state={{ name: name, address: address, number: number }} className="book_button" sx={{ border: 1, borderColor: "#69FFF1", color: "#69FFF1", display: "flex", flexGrow: 1, "&:hover": { backgroundColor: "#69FFF1", color: "black", fontWeight: "bolder", border: 2, }, textDecoration: 'none !important' }}>BOOK</Link>
+					<Link to={"/book"} state={{ name: name, address: address, number: number, id: id }} className="book_button" sx={{ border: 1, borderColor: "#69FFF1", color: "#69FFF1", display: "flex", flexGrow: 1, "&:hover": { backgroundColor: "#69FFF1", color: "black", fontWeight: "bolder", border: 2, }, textDecoration: 'none !important' }}>BOOK</Link>
 				</CardActions>
 			</CardContent>
 		</Card>
